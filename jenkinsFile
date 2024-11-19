@@ -104,7 +104,7 @@ pipeline {
                     reuseNode true
                 }
             }
-            environemnt{
+            environment{
                CI_ENVIRONMENT_URL = 'https://gregarious-kulfi-22c55b.netlify.app' 
             }
             steps {
