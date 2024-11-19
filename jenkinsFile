@@ -2,84 +2,88 @@ pipeline {
     agent any
 
     stages {
-        stage ('hello'){
-            steps {
-                echo 'hello world..'
-            }
-        }
-/*
+
         stage('Build') {
-            agent{
-                docker{
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                echo 'Building..'
-                sh 'ls -la'
-                sh 'node --version'
-                sh 'npm --version'
-                sh 'npm ci'
-                sh 'npm run build'
-                sh 'ls -la'
-            }
-        }
-*/
-/*
-        stage('Test') {
-            agent{
-                docker{
+            agent {
+                docker {
                     image 'node:18-alpine'
                     reuseNode true
                 }
             }
             steps {
                 sh '''
-                    #test -f build/index.html
-                    npm test
+                    ls -la
+                    node --version
+                    npm --version
+                    npm ci
+                    npm run build
+                    ls -la
                 '''
             }
         }
-        */
-        /*
-        stage('E2E') {
-            agent{
-                docker{
-                    image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
-                    reuseNode true
-                    //args '-u root:root' wrong solution but hange the path of the serve command
+
+        stage('Tests') {
+            parallel {
+                stage('Unit tests') {
+                    agent {
+                        docker {
+                            image 'node:18-alpine'
+                            reuseNode true
+                        }
+                    }
+
+                    steps {
+                        sh '''
+                            #test -f build/index.html
+                            npm test
+                        '''
+                    }
+                    post {
+                        always {
+                            junit 'jest-results/junit.xml'
+                        }
+                    }
+                }
+
+                stage('E2E') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                            reuseNode true
+                        }
+                    }
+
+                    steps {
+                        sh '''
+                            npm install serve
+                            node_modules/.bin/serve -s build &
+                            sleep 10
+                            npx playwright test  --reporter=html
+                        '''
+                    }
+
+                    post {
+                        always {
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Playwright HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                        }
+                    }
                 }
             }
-            steps {
-                sh '''
-                    npm install -g serve
-                    node_modules/.bin/serve -s build
-                    npx playwright-tests
-                '''
-            }
         }
-        */
 
         stage('Deploy') {
-            agent{
-                docker{
+            agent {
+                docker {
                     image 'node:18-alpine'
                     reuseNode true
                 }
             }
             steps {
-                
                 sh '''
-                npm install netlify-cli -g build
-                node_modules/.bin/netlify --version
+                    npm install netlify-cli
+                    node_modules/.bin/netlify --version
                 '''
             }
-        }
-    }
-    post{
-        always{
-            junit 'test-results/junit.xml'
         }
     }
 }
