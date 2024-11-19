@@ -39,7 +39,8 @@ pipeline {
                     npm test
                 '''
             }
-        }ù/*
+        }
+        /*
         stage('E2E') {
             agent{
                 docker{
